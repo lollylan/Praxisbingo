@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>🏥 Praxisbingo</title>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --primary: #2d7d6f;
+      --primary-light: #3a9e8d;
+      --accent: #f0a500;
+      --accent-light: #ffd166;
+      --danger: #e63946;
+      --text: #1a1a2e;
+      --text-light: #555;
+      --marked: #2d7d6f;
+      --marked-text: #fff;
+      --free: #f0a500;
+      --free-text: #fff;
+      --border: #d0dde8;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --radius: 12px;
+      --cell-radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 16px 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 800; letter-spacing: -0.5px; }
+    header p { font-size: clamp(0.8rem, 2vw, 0.95rem); opacity: 0.85; margin-top: 4px; }
+
+    /* CONTROLS */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mode-toggle {
+      display: flex;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .mode-btn {
+      padding: 6px 16px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-light);
+      transition: all 0.2s;
+    }
+    .mode-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+
+    .btn {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+    .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-new { background: var(--accent); color: #1a1a2e; }
+    .btn-edit { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-edit.active { background: var(--primary-light); color: white; border-color: var(--primary-light); }
+    .btn-export { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-print { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+    /* EDIT HINT */
+    .edit-hint {
+      text-align: center;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      color: #7a5f00;
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      display: none;
+    }
+    .edit-hint.visible { display: block; }
+
+    /* MAIN */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    /* BINGO STATUS */
+    #bingo-banner {
+      display: none;
+      width: 100%;
+      max-width: 600px;
+      background: linear-gradient(135deg, var(--accent), #ff6b35);
+      color: white;
+      text-align: center;
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      font-size: clamp(1.2rem, 4vw, 1.6rem);
+      font-weight: 800;
+      box-shadow: 0 4px 20px rgba(240,165,0,0.4);
+      animation: bingo-pop 0.4s ease;
+      letter-spacing: 1px;
+    }
+    #bingo-banner.visible { display: block; }
+    @keyframes bingo-pop {
+      0% { transform: scale(0.7); opacity: 0; }
+      70% { transform: scale(1.05); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* BOARD */
+    #board-container {
+      width: 100%;
+      max-width: 700px;
+    }
+    #board {
+      display: grid;
+      gap: clamp(4px, 1.2vw, 8px);
+      width: 100%;
+    }
+    #board.size-5 { grid-template-columns: repeat(5, 1fr); }
+    #board.size-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: clamp(4px, 1.5vw, 10px);
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--cell-radius);
+      cursor: pointer;
+      font-size: clamp(0.55rem, 1.8vw, 0.8rem);
+      font-weight: 600;
+      line-height: 1.25;
+      color: var(--text);
+      transition: all 0.18s ease;
+      user-select: none;
+      word-break: break-word;
+      hyphens: auto;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .cell:hover { border-color: var(--primary-light); transform: scale(1.02); z-index: 1; }
+    .cell.marked {
+      background: var(--marked);
+      border-color: var(--marked);
+      color: var(--marked-text);
+      box-shadow: 0 2px 10px rgba(45,125,111,0.3);
+    }
+    .cell.marked::after {
+      content: '✓';
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: clamp(0.5rem, 1.5vw, 0.75rem);
+      opacity: 0.6;
+    }
+    .cell.free {
+      background: var(--free);
+      border-color: var(--free);
+      color: var(--free-text);
+      cursor: default;
+      font-size: clamp(0.65rem, 2vw, 0.9rem);
+      font-weight: 800;
+    }
+    .cell.bingo-line {
+      background: linear-gradient(135deg, #2d7d6f, #1a5c52);
+      border-color: #1a5c52;
+      color: white;
+      animation: cell-win 0.3s ease;
+    }
+    @keyframes cell-win {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    /* EDIT MODE CELL */
+    .cell.edit-mode {
+      cursor: text;
+      border: 2px dashed var(--accent) !important;
+    }
+    .cell.edit-mode:hover { transform: none; }
+    .cell textarea {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      text-align: center;
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      color: inherit;
+      resize: none;
+      outline: none;
+      cursor: text;
+      line-height: 1.3;
+    }
+
+    /* CONFETTI */
+    #confetti-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 999;
+      overflow: hidden;
+    }
+    .confetti-piece {
+      position: absolute;
+      top: -20px;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      animation: fall linear forwards;
+    }
+    @keyframes fall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      80% { opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* EXPORT TOAST */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1a1a2e;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 12px;
+      font-size: 0.75rem;
+      color: var(--text-light);
+      border-top: 1px solid var(--border);
+    }
+
+    /* PRINT */
+    @media print {
+      header, .controls, .edit-hint, #bingo-banner, footer, .btn { display: none !important; }
+      body { background: white; }
+      #board-container { max-width: 100%; }
+      .cell { border: 2px solid #999 !important; background: white !important; color: black !important; break-inside: avoid; }
+      .cell.marked { background: #c8e6c9 !important; color: black !important; }
+      .cell::after { display: none !important; }
+    }
+
+    /* RESPONSIVE ADJUSTMENTS */
+    @media (max-width: 400px) {
+      .controls { padding: 10px 8px; gap: 6px; }
+      .btn { padding: 6px 10px; font-size: 0.78rem; }
+      .mode-btn { padding: 5px 10px; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏥 Praxisbingo</h1>
+  <p>Für das MFA-Team – wer zuerst eine Reihe voll hat, ruft BINGO! 🎉</p>
+</header>
+
+<div class="controls">
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode(5)" id="btn-5x5">5×5</button>
+    <button class="mode-btn" onclick="setMode(4)" id="btn-4x4">4×4</button>
+  </div>
+  <button class="btn btn-new" onclick="newGame()">🔀 Neu mischen</button>
+  <button class="btn btn-edit" id="edit-btn" onclick="toggleEdit()">✏️ Bearbeiten</button>
+  <button class="btn btn-export" onclick="exportBoard()">📋 Exportieren</button>
+  <button class="btn btn-print" onclick="window.print()">🖨️ Drucken</button>
+</div>
+
+<div class="edit-hint" id="edit-hint">
+  ✏️ Bearbeitungsmodus aktiv – tippe auf ein Feld um den Text zu ändern. Klicke erneut auf "Bearbeiten" zum Beenden.
+</div>
+
+<main>
+  <div id="bingo-banner">🎉 BINGO! Du hast gewonnen! Sag's dem Team! 🎉</div>
+  <div id="board-container">
+    <div id="board" class="size-5"></div>
+  </div>
+</main>
+
+<div id="confetti-container"></div>
+<div id="toast">📋 Kopiert!</div>
+
+<footer>Praxisbingo · Für Hausarzt-Teams · Viel Spaß heute! · <a href="https://asklaion.de" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: none;">asklaion.de</a></footer>
+
+<script>
+// =============================================
+// BINGO POOL – täglich wiederkehrende Ereignisse
+// =============================================
+const POOL = [
+  { id: 1,  text: "Patient hat vorher gegoogelt 🔍" },
+  { id: 2,  text: "Telefon klingelt 3x gleichzeitig 📞" },
+  { id: 3,  text: '"Nur kurz fragen..." ⏱️' },
+  { id: 4,  text: "Überraschungs-Hausbesuch 🏠" },
+  { id: 5,  text: "Rezept SOFORT gebraucht 📋" },
+  { id: 6,  text: "Krankschreibung für gestern bitte 🤒" },
+  { id: 7,  text: '"Dr. Google hat aber gesagt..." 💻' },
+  { id: 9,  text: "20 Min. Verspätung – kein Wort 🕐" },
+  { id: 10, text: "Notfall ohne Termin 🚨" },
+  { id: 11, text: '"Können Sie mich AUCH kurz untersuchen?" 🙋' },
+  { id: 12, text: "Drucker streikt 🖨️" },
+  { id: 13, text: "Attest für gestern gewünscht 📄" },
+  { id: 14, text: "15 Medikamente – alle aufschreiben 💊" },
+  { id: 15, text: '"Ich muss den Doktor noch kurz was fragen" ☎️' },
+  { id: 16, text: "Überweisung vergessen → kommt zurück 🔄" },
+  { id: 17, text: "5 Fragen erst beim Rausgehen 🚪" },
+  { id: 19, text: "Begleitperson redet statt Patient 👥" },
+  { id: 20, text: "Impfpass vergessen bei der Impfung 💉" },
+  { id: 21, text: "Nüchtern-Patient hat gegessen 🍞" },
+  { id: 22, text: '"Meine Frau wartet im Auto..." 🚗' },
+  { id: 23, text: '"Das sagten Sie letztens anders!" 🤔' },
+  { id: 24, text: "Wartezimmer-Diskussion zwischen Patienten 💬" },
+  { id: 25, text: "Infektpatient kommt außerhalb der Infektsprechstunde 🤧" },
+  { id: 27, text: "Laborfahrer ist unfreundlich 😤" },
+  { id: 30, text: "Patient nicht auffindbar 🤷" },
+  { id: 31, text: '"Die Tablette ist klein und blau" 💊' },
+  { id: 32, text: "EDV-Systemabsturz 💻" },
+  { id: 33, text: "Fast-Ohnmacht bei Blutabnahme 😵" },
+  { id: 34, text: 'Drei Patienten gleichzeitig "dringend" 🔴' },
+  { id: 35, text: "Patient bringt Zettel mit 10 Punkten 📋" },
+  { id: 36, text: "KV-Karte funktioniert nicht 💳" },
+  { id: 37, text: "Arztbrief vom Krankenhaus fehlt 📬" },
+  { id: 38, text: "Urlaub auf gelbem Schein gewünscht 🏖️" },
+  { id: 40, text: "Parkplatz-Beschwerde im Wartezimmer 🅿️" },
+  { id: 41, text: '"Ich brauche sofort eine Zweitmeinung" 🧐' },
+  { id: 42, text: "Krankenversicherung wechselt im Quartal 🔄" },
+  { id: 43, text: "Patient kommt für 'nur Blutdruck messen' 💉" },
+  { id: 44, text: "Telefon während Untersuchung klingelt 📱" },
+  { id: 45, text: "Stapel unbearbeiteter Post 📮" },
+  { id: 46, text: "Kurzzeitpflege: alle Medikamente neu verschreiben 📋" },
+  { id: 47, text: "Infektpatient hat Maske am Kinn 😷" },
+  { id: 48, text: "Neuer Patient bringt 3 Aktenordner Vorbefunde 📁" },
+  { id: 49, text: "Überweisung zum Spezialisten – ohne Untersuchung 🏃" },
+  { id: 50, text: "Sporttauglichkeitszeugnis – wird heute noch gebraucht 🏅" },
+  { id: 51, text: "Patient tippt während Gespräch aufs Handy 📱" },
+  { id: 52, text: "Hausbesuch wegen Erkältung gewünscht 🤧" },
+  { id: 53, text: "Patient kommt zum Check-up mit 30-Punkte-Liste 📋" },
+];
+
+// =============================================
+// STATE
+// =============================================
+let state = {
+  mode: 5,
+  cells: [],
+  editMode: false,
+  bingoLines: []
+};
+
+const STORAGE_KEY = 'praxisbingo_custom_texts';
+
+// =============================================
+// INIT
+// =============================================
+function init() {
+  newGame();
+}
+
+function setMode(size) {
+  state.mode = size;
+  document.getElementById('btn-5x5').classList.toggle('active', size === 5);
+  document.getElementById('btn-4x4').classList.toggle('active', size === 4);
+  newGame();
+}
+
+function newGame() {
+  const size = state.mode;
+  const totalCells = size * size;
+  const centerIdx = size === 5 ? 12 : -1;
+
+  // Load any custom texts saved by user
+  let customTexts = {};
+  try {
+    customTexts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  } catch(e) {}
+
+  // Shuffle pool
+  const shuffled = [...POOL].sort(() => Math.random() - 0.5);
+
+  state.cells = [];
+  state.bingoLines = [];
+
+  for (let i = 0; i < totalCells; i++) {
+    const isFree = (i === centerIdx);
+    const poolItem = shuffled[i] || { id: i, text: `Feld ${i+1}` };
+    const savedText = customTexts[`${size}_${i}`];
+    state.cells.push({
+      idx: i,
+      text: savedText || (isFree ? '⭐ FREI ⭐' : poolItem.text),
+      marked: isFree,
+      isFree: isFree
+    });
+  }
+
+  // Turn off edit mode on new game
+  state.editMode = false;
+  updateEditUI();
+
+  // Hide bingo banner
+  document.getElementById('bingo-banner').classList.remove('visible');
+
+  renderBoard();
+}
+
+// =============================================
+// RENDER
+// =============================================
+function renderBoard() {
+  const board = document.getElementById('board');
+  const size = state.mode;
+
+  board.className = `size-${size}`;
+  board.innerHTML = '';
+
+  state.cells.forEach((cell, i) => {
+    const div = document.createElement('div');
+    div.className = 'cell';
+    if (cell.marked) div.classList.add('marked');
+    if (cell.isFree) div.classList.add('free');
+    if (state.bingoLines.flat().includes(i)) div.classList.add('bingo-line');
+    if (state.editMode && !cell.isFree) div.classList.add('edit-mode');
+
+    if (state.editMode && !cell.isFree) {
+      const ta = document.createElement('textarea');
+      ta.value = cell.text;
+      ta.setAttribute('aria-label', `Feld ${i+1}`);
+      ta.addEventListener('change', (e) => updateCellText(i, e.target.value));
+      ta.addEventListener('blur', (e) => updateCellText(i, e.target.value));
+      div.appendChild(ta);
+    } else {
+      div.textContent = cell.text;
+      if (!cell.isFree) {
+        div.addEventListener('click', () => toggleCell(i));
+      }
+    }
+
+    board.appendChild(div);
+  });
+}
+
+function toggleCell(idx) {
+  if (state.editMode) return;
+  if (state.cells[idx].isFree) return;
+
+  state.cells[idx].marked = !state.cells[idx].marked;
+  checkBingo();
+  renderBoard();
+}
+
+function updateCellText(idx, newText) {
+  const trimmed = newText.trim();
+  if (!trimmed) return;
+  state.cells[idx].text = trimmed;
+
+  // Persist to localStorage
+  let customTexts = {};
+  try { customTexts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
+  customTexts[`${state.mode}_${idx}`] = trimmed;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(customTexts));
+}
+
+// =============================================
+// BINGO DETECTION
+// =============================================
+function checkBingo() {
+  const size = state.mode;
+  const cells = state.cells;
+  const lines = [];
+
+  // Rows
+  for (let r = 0; r < size; r++) {
+    const row = [];
+    for (let c = 0; c < size; c++) row.push(r * size + c);
+    if (row.every(i => cells[i].marked)) lines.push(row);
+  }
+
+  // Columns
+  for (let c = 0; c < size; c++) {
+    const col = [];
+    for (let r = 0; r < size; r++) col.push(r * size + c);
+    if (col.every(i => cells[i].marked)) lines.push(col);
+  }
+
+  // Diagonals
+  const diag1 = [], diag2 = [];
+  for (let i = 0; i < size; i++) {
+    diag1.push(i * size + i);
+    diag2.push(i * size + (size - 1 - i));
+  }
+  if (diag1.every(i => cells[i].marked)) lines.push(diag1);
+  if (diag2.every(i => cells[i].marked)) lines.push(diag2);
+
+  state.bingoLines = lines;
+
+  if (lines.length > 0) {
+    showBingo();
+  } else {
+    document.getElementById('bingo-banner').classList.remove('visible');
+  }
+}
+
+function showBingo() {
+  const banner = document.getElementById('bingo-banner');
+  banner.classList.add('visible');
+  launchConfetti();
+}
+
+// =============================================
+// CONFETTI
+// =============================================
+function launchConfetti() {
+  const container = document.getElementById('confetti-container');
+  container.innerHTML = '';
+  const colors = ['#2d7d6f', '#f0a500', '#e63946', '#3a9e8d', '#ffd166', '#ff6b35', '#a8dadc'];
+
+  for (let i = 0; i < 80; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.cssText = `
+      left: ${Math.random() * 100}%;
+      background: ${colors[Math.floor(Math.random() * colors.length)]};
+      width: ${6 + Math.random() * 8}px;
+      height: ${6 + Math.random() * 8}px;
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+      animation-duration: ${1.5 + Math.random() * 2}s;
+      animation-delay: ${Math.random() * 0.8}s;
+    `;
+    container.appendChild(piece);
+  }
+
+  setTimeout(() => { container.innerHTML = ''; }, 4000);
+}
+
+// =============================================
+// EDIT MODE
+// =============================================
+function toggleEdit() {
+  state.editMode = !state.editMode;
+  updateEditUI();
+  renderBoard();
+}
+
+function updateEditUI() {
+  const btn = document.getElementById('edit-btn');
+  const hint = document.getElementById('edit-hint');
+  btn.classList.toggle('active', state.editMode);
+  btn.textContent = state.editMode ? '✅ Fertig' : '✏️ Bearbeiten';
+  hint.classList.toggle('visible', state.editMode);
+}
+
+// =============================================
+// EXPORT
+// =============================================
+function exportBoard() {
+  const size = state.mode;
+  const lines = [`🏥 Praxisbingo ${size}×${size}`, ''];
+
+  for (let r = 0; r < size; r++) {
+    const row = [];
+    for (let c = 0; c < size; c++) {
+      const cell = state.cells[r * size + c];
+      const marker = cell.isFree ? '⭐' : (cell.marked ? '✅' : '☐');
+      row.push(`${marker} ${cell.text}`);
+    }
+    lines.push(row.join('   |   '));
+    if (r < size - 1) lines.push('');
+  }
+
+  lines.push('');
+  lines.push('Gespielt mit Praxisbingo 🏥');
+
+  const text = lines.join('\n');
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('📋 In die Zwischenablage kopiert!'));
+  } else {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 In die Zwischenablage kopiert!');
+  }
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// =============================================
+// START
+// =============================================
+init();
+</script>
+</body>
+</html>
