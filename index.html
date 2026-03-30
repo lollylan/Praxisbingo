@@ -300,11 +300,48 @@
       .cell::after { display: none !important; }
     }
 
+    /* ROLE TOGGLE */
+    .role-toggle {
+      display: flex;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .role-btn {
+      padding: 6px 14px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-light);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .role-btn.active-mfa  { background: #1565c0; color: white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+    .role-btn.active-arzt { background: #2d7d6f; color: white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+
+    /* ROLE BADGE in header */
+    #role-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    #role-badge.mfa  { background: #1565c0; color: white; }
+    #role-badge.arzt { background: #3a9e8d; color: white; }
+
     /* RESPONSIVE ADJUSTMENTS */
     @media (max-width: 400px) {
       .controls { padding: 10px 8px; gap: 6px; }
       .btn { padding: 6px 10px; font-size: 0.78rem; }
       .mode-btn { padding: 5px 10px; font-size: 0.8rem; }
+      .role-btn { padding: 5px 9px; font-size: 0.8rem; }
     }
   </style>
 </head>
@@ -312,10 +349,14 @@
 
 <header>
   <h1>🏥 Praxisbingo</h1>
-  <p>Für das MFA-Team – wer zuerst eine Reihe voll hat, ruft BINGO! 🎉</p>
+  <p id="header-sub">Wer zuerst eine Reihe voll hat, ruft BINGO! 🎉</p>
 </header>
 
 <div class="controls">
+  <div class="role-toggle">
+    <button class="role-btn active-mfa" onclick="setRole('mfa')" id="btn-mfa">👩‍⚕️ MFA</button>
+    <button class="role-btn" onclick="setRole('arzt')" id="btn-arzt">🩺 Arzt</button>
+  </div>
   <div class="mode-toggle">
     <button class="mode-btn active" onclick="setMode(5)" id="btn-5x5">5×5</button>
     <button class="mode-btn" onclick="setMode(4)" id="btn-4x4">4×4</button>
@@ -346,54 +387,62 @@
 // =============================================
 // BINGO POOL – täglich wiederkehrende Ereignisse
 // =============================================
+// role: 'mfa' = nur MFA, 'arzt' = nur Arzt, 'both' = beide
 const POOL = [
-  { id: 1,  text: "Patient hat vorher gegoogelt 🔍" },
-  { id: 2,  text: "Telefon klingelt 3x gleichzeitig 📞" },
-  { id: 3,  text: '"Nur kurz fragen..." ⏱️' },
-  { id: 4,  text: "Überraschungs-Hausbesuch 🏠" },
-  { id: 5,  text: "Rezept SOFORT gebraucht 📋" },
-  { id: 6,  text: "Krankschreibung für gestern bitte 🤒" },
-  { id: 7,  text: '"Dr. Google hat aber gesagt..." 💻' },
-  { id: 9,  text: "20 Min. Verspätung – kein Wort 🕐" },
-  { id: 10, text: "Notfall ohne Termin 🚨" },
-  { id: 11, text: '"Können Sie mich AUCH kurz untersuchen?" 🙋' },
-  { id: 12, text: "Drucker streikt 🖨️" },
-  { id: 13, text: "Attest für gestern gewünscht 📄" },
-  { id: 14, text: "15 Medikamente – alle aufschreiben 💊" },
-  { id: 15, text: '"Ich muss den Doktor noch kurz was fragen" ☎️' },
-  { id: 16, text: "Überweisung vergessen → kommt zurück 🔄" },
-  { id: 17, text: "5 Fragen erst beim Rausgehen 🚪" },
-  { id: 19, text: "Begleitperson redet statt Patient 👥" },
-  { id: 20, text: "Impfpass vergessen bei der Impfung 💉" },
-  { id: 21, text: "Nüchtern-Patient hat gegessen 🍞" },
-  { id: 22, text: '"Meine Frau wartet im Auto..." 🚗' },
-  { id: 23, text: '"Das sagten Sie letztens anders!" 🤔' },
-  { id: 24, text: "Wartezimmer-Diskussion zwischen Patienten 💬" },
-  { id: 25, text: "Infektpatient kommt außerhalb der Infektsprechstunde 🤧" },
-  { id: 27, text: "Laborfahrer ist unfreundlich 😤" },
-  { id: 30, text: "Patient nicht auffindbar 🤷" },
-  { id: 31, text: '"Die Tablette ist klein und blau" 💊' },
-  { id: 32, text: "EDV-Systemabsturz 💻" },
-  { id: 33, text: "Fast-Ohnmacht bei Blutabnahme 😵" },
-  { id: 34, text: 'Drei Patienten gleichzeitig "dringend" 🔴' },
-  { id: 35, text: "Patient bringt Zettel mit 10 Punkten 📋" },
-  { id: 36, text: "KV-Karte funktioniert nicht 💳" },
-  { id: 37, text: "Arztbrief vom Krankenhaus fehlt 📬" },
-  { id: 38, text: "Urlaub auf gelbem Schein gewünscht 🏖️" },
-  { id: 40, text: "Parkplatz-Beschwerde im Wartezimmer 🅿️" },
-  { id: 41, text: '"Ich brauche sofort eine Zweitmeinung" 🧐' },
-  { id: 42, text: "Krankenversicherung wechselt im Quartal 🔄" },
-  { id: 43, text: "Patient kommt für 'nur Blutdruck messen' 💉" },
-  { id: 44, text: "Telefon während Untersuchung klingelt 📱" },
-  { id: 45, text: "Stapel unbearbeiteter Post 📮" },
-  { id: 46, text: "Kurzzeitpflege: alle Medikamente neu verschreiben 📋" },
-  { id: 47, text: "Infektpatient hat Maske am Kinn 😷" },
-  { id: 48, text: "Neuer Patient bringt 3 Aktenordner Vorbefunde 📁" },
-  { id: 49, text: "Überweisung zum Spezialisten – ohne Untersuchung 🏃" },
-  { id: 50, text: "Sporttauglichkeitszeugnis – wird heute noch gebraucht 🏅" },
-  { id: 51, text: "Patient tippt während Gespräch aufs Handy 📱" },
-  { id: 52, text: "Hausbesuch wegen Erkältung gewünscht 🤧" },
-  { id: 53, text: "Patient kommt zum Check-up mit 30-Punkte-Liste 📋" },
+  // ── NUR MFA ──────────────────────────────────────────
+  { id: 2,  role: 'mfa',  text: "Telefon klingelt 3x gleichzeitig 📞" },
+  { id: 9,  role: 'mfa',  text: "20 Min. Verspätung – kein Wort 🕐" },
+  { id: 15, role: 'mfa',  text: '"Ich muss den Doktor noch kurz was fragen" ☎️' },
+  { id: 16, role: 'mfa',  text: "Überweisung vergessen → kommt zurück 🔄" },
+  { id: 20, role: 'mfa',  text: "Impfpass vergessen bei der Impfung 💉" },
+  { id: 21, role: 'mfa',  text: "Nüchtern-Patient hat gegessen 🍞" },
+  { id: 24, role: 'mfa',  text: "Wartezimmer-Diskussion zwischen Patienten 💬" },
+  { id: 27, role: 'mfa',  text: "Laborfahrer ist unfreundlich 😤" },
+  { id: 30, role: 'mfa',  text: "Patient nicht auffindbar 🤷" },
+  { id: 33, role: 'mfa',  text: "Fast-Ohnmacht bei Blutabnahme 😵" },
+  { id: 36, role: 'mfa',  text: "KV-Karte funktioniert nicht 💳" },
+  { id: 37, role: 'mfa',  text: "Arztbrief vom Krankenhaus fehlt 📬" },
+  { id: 40, role: 'mfa',  text: "Parkplatz-Beschwerde im Wartezimmer 🅿️" },
+  { id: 42, role: 'mfa',  text: "Krankenversicherung wechselt im Quartal 🔄" },
+  { id: 43, role: 'mfa',  text: "Patient kommt für 'nur Blutdruck messen' 💉" },
+  { id: 45, role: 'mfa',  text: "Stapel unbearbeiteter Post 📮" },
+  { id: 54, role: 'mfa',  text: "Rezept abholbereit – Patient weiß es nicht 📬" },
+  { id: 55, role: 'mfa',  text: "Wartezimmer voll, Arzt noch im Hausbesuch 🏠" },
+
+  // ── NUR ARZT ─────────────────────────────────────────
+  { id: 1,  role: 'arzt', text: "Patient hat vorher gegoogelt 🔍" },
+  { id: 4,  role: 'arzt', text: "Überraschungs-Hausbesuch 🏠" },
+  { id: 6,  role: 'arzt', text: "Krankschreibung für gestern bitte 🤒" },
+  { id: 7,  role: 'arzt', text: '"Dr. Google hat aber gesagt..." 💻' },
+  { id: 11, role: 'arzt', text: '"Können Sie mich AUCH kurz untersuchen?" 🙋' },
+  { id: 14, role: 'arzt', text: "15 Medikamente – alle aufschreiben 💊" },
+  { id: 17, role: 'arzt', text: "5 Fragen erst beim Rausgehen 🚪" },
+  { id: 19, role: 'arzt', text: "Begleitperson redet statt Patient 👥" },
+  { id: 22, role: 'arzt', text: '"Meine Frau wartet im Auto..." 🚗' },
+  { id: 23, role: 'arzt', text: '"Das sagten Sie letztens anders!" 🤔' },
+  { id: 31, role: 'arzt', text: '"Die Tablette ist klein und blau" 💊' },
+  { id: 35, role: 'arzt', text: "Patient bringt Zettel mit 10 Punkten 📋" },
+  { id: 38, role: 'arzt', text: "Urlaub auf gelbem Schein gewünscht 🏖️" },
+  { id: 41, role: 'arzt', text: '"Ich brauche sofort eine Zweitmeinung" 🧐' },
+  { id: 49, role: 'arzt', text: "Überweisung zum Spezialisten – ohne Untersuchung 🏃" },
+  { id: 51, role: 'arzt', text: "Patient tippt während Gespräch aufs Handy 📱" },
+  { id: 52, role: 'arzt', text: "Hausbesuch wegen Erkältung gewünscht 🤧" },
+  { id: 53, role: 'arzt', text: "Patient kommt zum Check-up mit 30-Punkte-Liste 📋" },
+
+  // ── BEIDE ────────────────────────────────────────────
+  { id: 3,  role: 'both', text: '"Nur kurz fragen..." ⏱️' },
+  { id: 5,  role: 'both', text: "Rezept SOFORT gebraucht 📋" },
+  { id: 10, role: 'both', text: "Notfall ohne Termin 🚨" },
+  { id: 12, role: 'both', text: "Drucker streikt 🖨️" },
+  { id: 13, role: 'both', text: "Attest für gestern gewünscht 📄" },
+  { id: 25, role: 'both', text: "Infektpatient kommt außerhalb der Infektsprechstunde 🤧" },
+  { id: 32, role: 'both', text: "EDV-Systemabsturz 💻" },
+  { id: 34, role: 'both', text: 'Drei Patienten gleichzeitig "dringend" 🔴' },
+  { id: 44, role: 'both', text: "Telefon klingelt mitten in der Untersuchung 📱" },
+  { id: 46, role: 'both', text: "Kurzzeitpflege: alle Medikamente neu verschreiben 📋" },
+  { id: 47, role: 'both', text: "Infektpatient hat Maske am Kinn 😷" },
+  { id: 48, role: 'both', text: "Neuer Patient bringt 3 Aktenordner Vorbefunde 📁" },
+  { id: 50, role: 'both', text: "Sporttauglichkeitszeugnis – wird heute noch gebraucht 🏅" },
 ];
 
 // =============================================
@@ -401,6 +450,7 @@ const POOL = [
 // =============================================
 let state = {
   mode: 5,
+  role: 'mfa',
   cells: [],
   editMode: false,
   bingoLines: []
@@ -412,6 +462,7 @@ const STORAGE_KEY = 'praxisbingo_custom_texts';
 // INIT
 // =============================================
 function init() {
+  updateRoleUI();
   newGame();
 }
 
@@ -420,6 +471,27 @@ function setMode(size) {
   document.getElementById('btn-5x5').classList.toggle('active', size === 5);
   document.getElementById('btn-4x4').classList.toggle('active', size === 4);
   newGame();
+}
+
+function setRole(role) {
+  state.role = role;
+  updateRoleUI();
+  newGame();
+}
+
+function updateRoleUI() {
+  const mfaBtn  = document.getElementById('btn-mfa');
+  const arztBtn = document.getElementById('btn-arzt');
+  const sub     = document.getElementById('header-sub');
+
+  mfaBtn.className  = 'role-btn' + (state.role === 'mfa'  ? ' active-mfa'  : '');
+  arztBtn.className = 'role-btn' + (state.role === 'arzt' ? ' active-arzt' : '');
+
+  if (state.role === 'mfa') {
+    sub.innerHTML = '👩‍⚕️ <strong>MFA-Version</strong> – Anmeldung · Büro · Labor · Wer zuerst eine Reihe voll hat, ruft BINGO! 🎉';
+  } else {
+    sub.innerHTML = '🩺 <strong>Arzt-Version</strong> – Sprechzimmer · Hausbesuche · Wer zuerst eine Reihe voll hat, ruft BINGO! 🎉';
+  }
 }
 
 function newGame() {
@@ -433,8 +505,9 @@ function newGame() {
     customTexts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
   } catch(e) {}
 
-  // Shuffle pool
-  const shuffled = [...POOL].sort(() => Math.random() - 0.5);
+  // Filter pool by role, then shuffle
+  const filtered = POOL.filter(p => p.role === state.role || p.role === 'both');
+  const shuffled = [...filtered].sort(() => Math.random() - 0.5);
 
   state.cells = [];
   state.bingoLines = [];
@@ -442,7 +515,7 @@ function newGame() {
   for (let i = 0; i < totalCells; i++) {
     const isFree = (i === centerIdx);
     const poolItem = shuffled[i] || { id: i, text: `Feld ${i+1}` };
-    const savedText = customTexts[`${size}_${i}`];
+    const savedText = customTexts[`${state.role}_${size}_${i}`];
     state.cells.push({
       idx: i,
       text: savedText || (isFree ? '⭐ FREI ⭐' : poolItem.text),
@@ -514,7 +587,7 @@ function updateCellText(idx, newText) {
   // Persist to localStorage
   let customTexts = {};
   try { customTexts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
-  customTexts[`${state.mode}_${idx}`] = trimmed;
+  customTexts[`${state.role}_${state.mode}_${idx}`] = trimmed;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(customTexts));
 }
 
@@ -612,7 +685,8 @@ function updateEditUI() {
 // =============================================
 function exportBoard() {
   const size = state.mode;
-  const lines = [`🏥 Praxisbingo ${size}×${size}`, ''];
+  const roleLabel = state.role === 'mfa' ? '👩‍⚕️ MFA-Version' : '🩺 Arzt-Version';
+  const lines = [`🏥 Praxisbingo ${size}×${size} – ${roleLabel}`, ''];
 
   for (let r = 0; r < size; r++) {
     const row = [];
